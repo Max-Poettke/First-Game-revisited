@@ -1,0 +1,28 @@
+<html>
+<body>
+
+</body>
+<script>
+var x;
+var y;
+var z;
+var h;
+var result = 0;
+x = window.prompt("Bitte eine natürliche Zahl eingeben", x);
+parseFloat(x);
+x = Math.round(x);
+
+while (x > 0.9){
+    y = x/10;
+    z = Math.floor(y);
+    h = y - z;
+    h = h*10;
+    result = result + h;
+    x = z;
+}
+if (x <= 0.9){
+    result = Math.round(result);
+    document.write("Your result is "+result+"");
+}
+</script>
+</html>

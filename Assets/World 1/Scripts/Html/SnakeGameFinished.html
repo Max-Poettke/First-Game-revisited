@@ -1,0 +1,462 @@
+<html>
+    <body>
+        <canvas width="400" height="400" id="gameCanvas"></canvas>
+        <div id="scoreboard" position="relative" background-colour="gray" width="25%" height="100px"></div>
+    </body>
+    <script>
+        console.log('Hello!');
+
+const board_background = 'green';
+const board_border = 'black';
+const snake_col = 'yellow';
+const snake_border = 'black';
+var flowSpeed = 100;
+var mouseX = 0;
+var mouseY = 0;
+var towerX;
+var towerY;
+let towerNumber = 0;
+let dx = 10;
+let dy = 0;
+var moveX = 0;
+var moveX = 0;
+let changing_direction = false;
+let foodSpawned = false;
+let endSnake = false;
+var score = 0;
+
+// 
+const snakeboard = document.getElementById("gameCanvas");
+const snakeboard_ctx = gameCanvas.getContext("2d");
+
+let projectiles = [];
+let towers = [];
+let food = [];
+let snake = [ {x: 200, y: 200}, 
+              {x: 190, y: 200},
+              {x: 180, y: 200},
+              {x: 170, y: 200}, 
+              {x: 160, y: 200},
+              ];
+
+main();
+spawn_Food();
+
+function main(){
+  
+  if (has_game_ended() || endSnake === true){ 
+    spawn_Enemy();
+    document.addEventListener("mousedown", spawn_Tower);
+    document.addEventListener("mousemove", mouse_Pos);
+    main_Towerdefense();
+      tower_Loop();
+      enemy_Loop();
+    return;
+  }
+  changing_direction = false;
+  eating_food = false;
+  setTimeout(function onTick() {
+    clearCanvas(); 
+    move_Snake();
+    drawSnake(); 
+    update_Scoreboard();
+    food.forEach(draw_Food);
+    food.forEach(check_Food);
+    main();
+    }, flowSpeed)
+}
+
+document.addEventListener("keydown", change_Direction);
+document.addEventListener("keydown", slow_Time);
+
+function has_game_ended() {
+  for (let i = 4; i < snake.length; i ++) {
+    const has_collided = snake[i].x === snake[0].x && snake[i].y === snake[0].y;
+    if (has_collided) {
+      console.log("dead");
+      return true;
+    } //else {return false;}
+  }
+  
+//  const hitLeftWall = snake[0].x < 0;
+//  const hitRightWall = snake[0].x > snakeboard.width - 10;
+  const hitTopWall = snake[0].y < 0;
+  const hitBottomWall = snake[0].y > snakeboard.height - 10;
+  
+  return hitTopWall || hitBottomWall;
+}
+
+
+function clearCanvas(){
+  snakeboard_ctx.fillStyle = board_background;
+  snakeboard_ctx.strokeStyle = board_border;
+  snakeboard_ctx.fillRect(0, 0, snakeboard.width, snakeboard.height);
+  snakeboard_ctx.strokeRect(0, 0, snakeboard.width, snakeboard.height);
+}
+
+function drawSnake() {
+  snake.forEach(drawSnakePart);
+}
+
+function drawSnakePart(snakePart){
+  snakeboard_ctx.fillStyle = snake_col;
+  snakeboard_ctx.strokeStyle = snake_border;
+  
+  snakeboard_ctx.fillRect(snakePart.x, snakePart.y, 10, 10);
+  snakeboard_ctx.strokeRect(snakePart.x, snakePart.y, 10, 10);
+}
+
+function slow_Time(event) {
+  const SPACE_KEY = 32;
+  keyDown = event.keyCode;
+  if (keyDown === SPACE_KEY && flowSpeed === 100) {
+    flowSpeed = 200;
+  } else
+  if (keyDown === SPACE_KEY && flowSpeed === 200) {
+    flowSpeed = 100;
+  }
+}
+
+function change_Direction(event) {
+  
+  if (changing_direction) return;
+  changing_direction = true;
+  const LEFT_KEY = 37;
+  const RIGHT_KEY = 39;
+  const UP_KEY = 38;
+  const DOWN_KEY = 40;
+  const TAB_KEY = 9;
+  const M_KEY = 77;
+  
+  const keyPressed = event.keyCode;
+  const goingUp = dy === -10;
+  const goingDown = dy === 10;
+  const goingRight = dx === 10;
+  const goingLeft = dx === -10;
+  
+//                              This is to ELONGATE
+    if (keyPressed === M_KEY){
+      const tail = {x: snake[snake.length - 1].x - dx, y: snake[snake.length - 1].y - dy};
+      snake.push(tail);
+    }
+    if (keyPressed === TAB_KEY) {
+      endSnake = true;
+    }
+//                              This is to actually change directions
+    if (keyPressed === LEFT_KEY && !goingRight) {
+      dx = -10;
+      dy = 0;
+    }
+    if (keyPressed === RIGHT_KEY && !goingLeft) {
+      dx = 10;
+      dy = 0;
+    }
+    if (keyPressed === UP_KEY && !goingDown) {
+      dx = 0;
+      dy = -10;
+    }
+    if (keyPressed === DOWN_KEY && !goingUp) {
+      dx = 0;
+      dy = 10;
+    }
+}
+
+function move_Snake() {
+  const head = {x: snake[0].x + dx, y: snake[0].y + dy}
+  snake.unshift(head);
+  snake.pop();
+  
+  const rightToLeft = snake[0].x > snakeboard.width - 10;
+  const leftToRight = snake[0].x < 0;
+  
+  if (rightToLeft) {
+    const portalHeadLeft = {x: 0, y: snake[0].y}
+    snake.unshift(portalHeadLeft);
+    snake.pop();
+  }
+  if (leftToRight) {
+    const portalHeadRight = {x: snakeboard.width - 10, y: snake[0].y};
+    snake.unshift(portalHeadRight);
+    snake.pop();
+  }
+}
+
+function spawn_Food () {
+
+  var food_x = Math.round((Math.random() * snakeboard.width) / 10) * 10;
+  var food_y = Math.round((Math.random() * snakeboard.height) / 10) * 10;
+  
+  if (food_x === 400) { 
+    food_x -= 10;
+  }
+  if (food_y === 400) {
+    food_y -= 10;
+  } 
+  
+  const foodPos = {x: food_x, y: food_y};
+  console.log(foodPos);
+  food.unshift(foodPos);
+  
+}
+
+function draw_Food(nxtFood){
+  
+  snakeboard_ctx.fillStyle = 'red';
+  snakeboard_ctx.strokeStyle = 'black';
+  
+  snakeboard_ctx.fillRect(nxtFood.x, nxtFood.y, 10, 10);
+  snakeboard_ctx.strokeRect(nxtFood.x, nxtFood.y, 10, 10);
+  
+}
+
+function check_Food (nxtFood) {
+  if (snake[0].x === nxtFood.x && snake[0].y === nxtFood.y) {
+    console.log("yum");
+    pos = food.indexOf(nxtFood);
+    food.splice(pos, 1);
+    const tail = { x: snake[snake.length - 1].x - dx, y: snake[snake.length - 1].y - dy };
+    snake.push(tail);
+    score += 10;
+    spawn_Food();
+  }
+}
+
+function update_Scoreboard (){
+  scoreboard = document.getElementById('scoreboard');
+  scoreboard.innerHTML = 'Score: ' + score;
+}
+
+// part 2            TOWERDEFENSE
+
+var enemies = [];
+var gameSpeed = 50;
+var currentEnemyPos;
+function main_Towerdefense(){
+// Gameloop for handleing enemies 
+// Main gameloop
+  setTimeout(function OnTick(){
+    clearCanvas();
+    drawSnake();
+    enemies.forEach(draw_Enemies);
+    towers.forEach(draw_Towers);
+    towers.forEach(draw_TowerRange);
+    if (projectiles.length > 0){
+    projectiles.forEach(move_Projectiles);
+    projectiles.forEach(draw_Projectiles);
+    }
+    update_Scoreboard();
+    main_Towerdefense();
+  }, gameSpeed);
+  
+  
+}
+
+function enemy_Loop(){
+  setTimeout(function OnTick(){
+    if (enemies.length > 0){
+    enemies.forEach(move_Enemies);
+    }
+    enemy_Loop();
+  }, 400 / 25)
+}
+var numberOfEnemies = 0;
+function spawn_Enemy(){
+  
+  enemy_x = snake[0].x + 2.5;
+  enemy_y = snake[0].y + 2.5;
+  
+  const newEnemy = {x: enemy_x, y: enemy_y, arrayPos: 0, enemyNumber: numberOfEnemies, hp: 5};
+  console.log(newEnemy);
+  enemies.push(newEnemy);
+  numberOfEnemies += 1;
+}
+
+function draw_Enemies(thsEnemy){
+  snakeboard_ctx.fillStyle = 'blue';
+  snakeboard_ctx.strokeStyle = 'black';
+  
+  snakeboard_ctx.fillRect(thsEnemy.x, thsEnemy.y, 5, 5);
+  snakeboard_ctx.strokeRect(thsEnemy.x, thsEnemy.y, 5, 5);
+}
+
+function move_Enemies(thsEnemy) {
+  if (thsEnemy.arrayPos <= snake.length - 1){
+  if (thsEnemy.x === snake[thsEnemy.arrayPos].x + 2.5 && thsEnemy.y === snake[thsEnemy.arrayPos].y + 2.5) {
+    if (thsEnemy.arrayPos === snake.length - 1) {
+      enemy_Reached_Exit(thsEnemy); 
+      return;
+    }
+      moveX = ((snake[thsEnemy.arrayPos + 1].x + 2.5) - thsEnemy.x) / 10;
+      moveY = ((snake[thsEnemy.arrayPos + 1].y + 2.5) - thsEnemy.y) / 10;
+      thsEnemy.x += moveX;
+      thsEnemy.y += moveY;
+    thsEnemy.arrayPos = thsEnemy.arrayPos + 1;
+    } else {
+    thsEnemy.x += moveX;
+    thsEnemy.y += moveY;
+    }
+  }
+}
+function enemy_Reached_Exit(thsEnemy) {
+//  console.log("One did it!!!")
+  let index = projectiles.indexOf(a => a.target === thsEnemy.enemyNumber);
+  if (index != NaN){
+//    console.log("it worked")
+  projectiles.splice(index);}
+  enemies.splice(thsEnemy);
+  spawn_Enemy();
+}
+
+function mouse_Pos(event){
+  mouseX = event.clientX - 10;
+  mouseY = event.clientY - 10;
+}
+
+function spawn_Tower(event) {
+//  console.log("click detected");
+  towerX = Math.round(mouseX / 10) * 10;
+  towerY = Math.round(mouseY / 10) * 10;
+  if (check_Before_Placement()){
+  return;
+  }
+  if (towerX != snake.x && towerY != snake.y){
+  let newTower = {x: towerX,y: towerY,towerRange: 40,shotSpeed: 400, number: towerNumber, projectileSpeed: 2};
+  towerNumber += 1;
+  towers.push(newTower);
+//  console.log(newTower);
+  register_Projectile(newTower);
+  }
+}
+
+function tower_Loop(){
+ setTimeout(function onTick(){
+   tower_Loop();
+ }, 50); 
+}
+
+function draw_Towers(thsTower) {
+  snakeboard_ctx.fillStyle = 'black';
+  snakeboard_ctx.strokeStyle = 'white';
+  
+  snakeboard_ctx.fillRect(thsTower.x ,thsTower.y, 9, 9);
+  snakeboard_ctx.strokeRect(thsTower.x,thsTower.y, 9, 9);
+}
+
+function draw_TowerRange(thsTower){
+  snakeboard_ctx.fillStyle = "rgba(255,255,255, 0.5)";
+  snakeboard_ctx.strokeStyle = 'white';
+  
+  if (mouseX <= thsTower.x + 10 && mouseX >= thsTower.x && mouseY >= thsTower.y && mouseY <= thsTower.y + 10) {
+//    const towerArrPos = thsTower.number;
+//    console.log("IMPORTANT", towerArrPos)
+    snakeboard_ctx.beginPath();
+    const individualTowerRange = snakeboard_ctx.arc(thsTower.x + 5, thsTower.y + 5, thsTower.towerRange, 0, Math.PI * 2);
+    snakeboard_ctx.fill(individualTowerRange);
+  }
+}
+
+function check_Before_Placement(){
+  let alreadySet = false;
+    for (let i = 0; i < snake.length; i++){
+      const isSetSnake = snake[i].x === towerX && snake[i].y === towerY;
+      if (isSetSnake){
+        alreadySet = true;
+      }
+    }
+    for (let i = 0; i < towers.length; i++){
+      const isSetTower = towers[i].x === towerX && towers[i].y === towerY;
+      if (isSetTower) {
+        alreadySet = true;
+      }
+    }
+    if (alreadySet) {
+      return true;
+    }
+}
+
+function detect_Enemy(thsTower){
+ for(let i = 0; i < enemies.length; i++) {
+   var distanceToTower = (enemies[i].x - thsTower.x) * (enemies[i].x - thsTower.x) + (enemies[i].y - thsTower.y) * (enemies[i].y - thsTower.y);
+   var radius = thsTower.towerRange * thsTower.towerRange;
+   if (distanceToTower < radius){
+     return true;
+   }
+ }
+}
+
+function register_Projectile(thsTower){
+  if (detect_Enemy(thsTower)) {
+//    console.log("found one")
+    spawn_Projectile(thsTower);
+    // Get EnemyPos within Radius
+  }  
+  setTimeout(function onTick() {
+    register_Projectile(thsTower);
+  }, thsTower.shotSpeed)
+}
+
+function spawn_Projectile(pos){
+  snakeboard_ctx.fillStyle = 'red';
+  snakeboard_ctx.strokeStyle = 'grey';
+  
+  snakeboard_ctx.fillRect(pos.x, pos.y, 5, 5);
+  snakeboard_ctx.strokeRect(pos.x, pos.y, 5, 5);
+  
+  if (get_Target(pos) === false){
+    return;
+  }
+  const newProjectile = {x: pos.x, y: pos.y, speed: pos.projectileSpeed, target: get_Target(pos)};
+  projectiles.push(newProjectile);
+//  console.log(pos.x, pos.y, pos.projectileSpeed, "Target: ", newProjectile.target);
+//  console.log(projectiles.length);
+}
+
+function draw_Projectiles(thsProjectile) {
+  snakeboard_ctx.fillStyle = 'red';
+  snakeboard_ctx.strokeStyle = 'grey';
+  
+  snakeboard_ctx.fillRect(thsProjectile.x, thsProjectile.y, 5, 5);
+  snakeboard_ctx.strokeRect(thsProjectile.x, thsProjectile.y, 5, 5);
+}
+
+function move_Projectiles(thsProjectile) {
+  
+  index = enemies.findIndex(a => a.enemyNumber === thsProjectile.target);
+  // kill Projectile on contact or enemy death
+
+  if (enemies[index] == undefined || ((enemies[index].x + 5) >= thsProjectile.x && (enemies[index].y + 5) >= thsProjectile.y) 
+  || (enemies[index].x - 5 <= thsProjectile.x && enemies[index].y <= thsProjectile.y)){
+//    const expiredProjectile = projectiles.findIndex(a => a.target === enemies[index].enemyNumber);
+    const expiredProjectile = projectiles.indexOf(thsProjectile);
+    projectiles.splice(expiredProjectile, 1);
+    if (enemies[index] != undefined){
+      enemies[index].hp -= 1;
+      if (enemies[index].hp <= 0){
+        enemies.splice(index, 1);
+        spawn_Enemy();
+      }
+    }
+    return;
+    }
+    
+  let moveX = (enemies[index].x - thsProjectile.x) / thsProjectile.speed;
+  let moveY = (enemies[index].y - thsProjectile.y) / thsProjectile.speed;
+  
+  thsProjectile.x  += moveX;
+  thsProjectile.y += moveY;
+}
+
+function get_Target(thsTower){
+ for (let i = 0; i < enemies.length; i++) {
+   var distanceToTower = (enemies[i].x - thsTower.x) * (enemies[i].x - thsTower.x) + (enemies[i].y - thsTower.y) * (enemies[i].y - thsTower.y);
+   var radius = thsTower.towerRange * thsTower.towerRange;
+   if (distanceToTower < radius) {
+     //     console.log("Enemy detected!");
+     console.log("EnemyNumber: ",enemies[i].enemyNumber);
+     return enemies[i].enemyNumber;
+   }
+ }  
+  
+}
+    </script>
+</html>

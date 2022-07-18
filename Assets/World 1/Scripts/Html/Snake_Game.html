@@ -1,0 +1,274 @@
+<html>
+<style>
+.scoreboard {
+    position: relative;
+    background-color: gray;
+    width: 25%;
+    height: 100px;
+}
+</style>
+<body>
+    <canvas id="gameCanvas" width="400" height="400"></canvas>
+    <div id="scoreboard" class="scoreboard"></div>
+</body>
+<script>
+console.log('Hello World!');
+
+const board_background = 'white';
+const board_border = 'black';
+const snake_col = 'yellow';
+const snake_border = 'black';
+var flowSpeed = 100;
+let dx = 10;
+let dy = 0;
+let changing_direction = false;
+let foodSpawned = false;
+let endSnake = false;
+var score = 0;
+
+//
+const snakeboard = document.getElementById("gameCanvas");
+const snakeboard_ctx = gameCanvas.getContext("2d");
+
+let food = [];
+let snake = [ {x: 200, y: 200},
+{x: 190, y: 200},
+{x: 180, y: 200},
+{x: 170, y: 200},
+{x: 160, y: 200},
+];
+
+main();
+spawn_Food();
+
+function main(){
+if (has_game_ended() || endSnake == true){
+spawn_Enemy();
+main_Towerdefense();
+return;
+}
+changing_direction = false;
+eating_food = false;
+setTimeout(function onTick() {
+clearCanvas();
+move_Snake();
+drawSnake();
+update_Scoreboard();
+food.forEach(draw_Food);
+food.forEach(check_Food);
+main();
+}, flowSpeed)
+}
+
+document.addEventListener("keydown", change_Direction);
+document.addEventListener("keydown", slow_Time);
+
+function has_game_ended() {
+for (let i = 4; i < snake.length; i ++) {
+const has_collided = snake[i].x === snake[0].x && snake[i].y === snake[0].y;
+if (has_collided) {
+return true;
+}
+}
+
+// const hitLeftWall = snake[0].x < 0;
+// const hitRightWall = snake[0].x > snakeboard.width - 10;
+const hitTopWall = snake[0].y < 0;
+const hitBottomWall = snake[0].y > snakeboard.height - 10;
+
+return hitTopWall || hitBottomWall;
+}
+
+
+function clearCanvas(){
+snakeboard_ctx.fillStyle = board_background;
+snakeboard_ctx.strokeStyle = board_border;
+snakeboard_ctx.fillRect(0, 0, snakeboard.width, snakeboard.height);
+snakeboard_ctx.strokeRect(0, 0, snakeboard.width, snakeboard.height);
+}
+
+function drawSnake() {
+snake.forEach(drawSnakePart);
+}
+
+function drawSnakePart(snakePart){
+snakeboard_ctx.fillStyle = snake_col;
+snakeboard_ctx.strokeStyle = snake_border;
+
+snakeboard_ctx.fillRect(snakePart.x, snakePart.y, 10, 10);
+snakeboard_ctx.strokeRect(snakePart.x, snakePart.y, 10, 10);
+}
+
+function slow_Time(event) {
+const SPACE_KEY = 32;
+keyDown = event.keyCode;
+if (keyDown === SPACE_KEY && flowSpeed === 100) {
+flowSpeed = 200;
+} else
+if (keyDown === SPACE_KEY && flowSpeed === 200) {
+flowSpeed = 100;
+}
+}
+
+function change_Direction(event) {
+
+if (changing_direction) return;
+changing_direction = true;
+const LEFT_KEY = 37;
+const RIGHT_KEY = 39;
+const UP_KEY = 38;
+const DOWN_KEY = 40;
+const TAB_KEY = 9;
+const M_KEY = 77;
+
+const keyPressed = event.keyCode;
+const goingUp = dy === -10;
+const goingDown = dy === 10;
+const goingRight = dx === 10;
+const goingLeft = dx === -10;
+
+// This is to ELONGATE
+if (keyPressed === M_KEY){
+const tail = {x: snake[snake.length - 1].x - dx, y: snake[snake.length - 1].y - dy};
+snake.push(tail);
+}
+if (keyPressed === TAB_KEY) {
+endSnake = true;
+}
+// This is to actually change directions
+if (keyPressed === LEFT_KEY && !goingRight) {
+dx = -10;
+dy = 0;
+}
+if (keyPressed === RIGHT_KEY && !goingLeft) {
+dx = 10;
+dy = 0;
+}
+if (keyPressed === UP_KEY && !goingDown) {
+dx = 0;
+dy = -10;
+}
+if (keyPressed === DOWN_KEY && !goingUp) {
+dx = 0;
+dy = 10;
+}
+}
+
+function move_Snake() {
+const head = {x: snake[0].x + dx, y: snake[0].y + dy}
+snake.unshift(head);
+snake.pop();
+
+const rightToLeft = snake[0].x > snakeboard.width - 10;
+const leftToRight = snake[0].x < 0;
+
+if (rightToLeft) {
+const portalHeadLeft = {x: 0, y: snake[0].y}
+snake.unshift(portalHeadLeft);
+snake.pop();
+}
+if (leftToRight) {
+const portalHeadRight = {x: snakeboard.width - 10, y: snake[0].y};
+snake.unshift(portalHeadRight);
+snake.pop();
+}
+}
+
+function spawn_Food () {
+
+var food_x = Math.round((Math.random() * snakeboard.width) / 10) * 10;
+var food_y = Math.round((Math.random() * snakeboard.height) / 10) * 10;
+
+if (food_x === 400) {
+food_x -= 10;
+}
+if (food_y === 400) {
+food_y -= 10;
+}
+
+const foodPos = {x: food_x, y: food_y};
+console.log(foodPos);
+food.unshift(foodPos);
+
+}
+
+function draw_Food(nxtFood){
+
+snakeboard_ctx.fillStyle = 'red';
+snakeboard_ctx.strokeStyle = 'black';
+
+snakeboard_ctx.fillRect(nxtFood.x, nxtFood.y, 10, 10);
+snakeboard_ctx.strokeRect(nxtFood.x, nxtFood.y, 10, 10);
+
+}
+
+function check_Food (nxtFood) {
+if (snake[0].x === nxtFood.x && snake[0].y === nxtFood.y) {
+console.log("yum");
+pos = food.indexOf(nxtFood);
+food.splice(pos, 1);
+const tail = { x: snake[snake.length - 1].x - dx, y: snake[snake.length - 1].y - dy };
+snake.push(tail);
+score += 10;
+spawn_Food();
+}
+}
+
+function update_Scoreboard (){
+scoreboard = document.getElementById('scoreboard');
+scoreboard.innerHTML = 'Score: ' + score;
+}
+
+// part 2 TOWERDEFENSE
+
+var enemies = [];
+var spawnSpeed = 800;
+var gameSpeed = 400;
+var currentEnemyPos;
+function main_Towerdefense(){
+// Gameloop for handeling enemies
+
+// Main gameloop
+setTimeout(function OnTick(){
+clearCanvas();
+drawSnake();
+enemies.forEach(move_Enemies);
+enemies.forEach(draw_Enemies);
+update_Scoreboard();
+main_Towerdefense();
+}, gameSpeed);
+}
+
+function spawn_Enemy(){
+
+enemy_x = snake[0].x + 2.5;
+enemy_y = snake[0].y + 2.5;
+
+const newEnemy = {x: enemy_x, y: enemy_y, arrayPos: 0};
+console.log(newEnemy);
+enemies.push(newEnemy);
+}
+
+function draw_Enemies(thsEnemy){
+snakeboard_ctx.fillStyle = 'blue';
+snakeboard_ctx.strokeStyle = 'black';
+
+snakeboard_ctx.fillRect(thsEnemy.x, thsEnemy.y, 5, 5);
+snakeboard_ctx.strokeRect(thsEnemy.x, thsEnemy.y, 5, 5);
+}
+
+function move_Enemies(thsEnemy) {
+if (thsEnemy.arrayPos <= snake.length - 1){
+thsEnemy.x = snake[thsEnemy.arrayPos].x + 2.5;
+thsEnemy.y = snake[thsEnemy.arrayPos].y + 2.5;
+
+thsEnemy.arrayPos = thsEnemy.arrayPos + 1;
+} else { enemy_Reached_Exit(); }
+}
+function enemy_Reached_Exit() {
+    console.log("one did it!!!");
+    enemies.shift();
+    spawn_Enemy();
+}
+</script>
+</html>

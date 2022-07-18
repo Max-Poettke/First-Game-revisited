@@ -1,0 +1,50 @@
+<html>
+
+<style>
+.lilBox {
+
+    background-color: black;
+    position:absolute;
+    width:   50px;
+    height:  50px;
+}
+</style>
+
+<body>
+        <div id="Ally" class="lilBox" onButtonDown=whichKey()></div>
+</body>
+
+<script>
+var buttonPressed;
+
+window.addEventListener("keydown", (event) => {
+buttonPressed = event.key;
+console.log(buttonPressed);
+checkKey();
+
+});
+
+function checkKey() {
+    switch (buttonPressed){
+        case (buttonPressed == "W" || buttonPressed == "w"):
+            moveAllyUp();
+            break;
+        case (buttonPressed == "A" || buttonPressed == "a"):
+            moveAllyLeft();
+            break;
+        case (buttonPressed == "D" || buttonPressed == "d"):
+            moveAllyRight();
+            break;
+        case (buttonPressed == "S" || buttonPressed == "s"):  
+            moveAllyDown();
+    }
+}
+
+function moveAllyUp(){
+    var AllyPos = document.getElementById("Ally");
+    AllyPos.style.left = AllyPos.style.left + "50px";
+}
+
+</script>
+
+</html>
